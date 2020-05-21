@@ -70,8 +70,6 @@
 	dispatch_group_t _treeBuildingGroup;
 	
 	// lookup table for blocks that deal with begin and end tags
-	NSMutableDictionary *_tagStartHandlers;
-	NSMutableDictionary *_tagEndHandlers;
 	
 	DTHTMLAttributedStringBuilderWillFlushCallback _willFlushCallback;
 	DTHTMLAttributedStringBuilderParseErrorCallback _parseErrorCallback;
@@ -81,7 +79,6 @@
 	// new parsing
 	DTHTMLElement *_rootNode;
 	DTHTMLElement *_bodyElement;
-	DTHTMLElement *_currentTag;
 	BOOL _ignoreParseEvents; // ignores events from parser after first HTML tag was finished
 	BOOL _ignoreInlineStyles; // ignores style blocks attached on elements
 	BOOL _preserverDocumentTrailingSpaces; // don't remove spaces at end of document

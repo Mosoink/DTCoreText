@@ -542,13 +542,14 @@
 	{
 		// if the attachment has a hyperlinkURL then this is currently ignored
 		DTLazyImageView *imageView = [[DTLazyImageView alloc] initWithFrame:frame];
-		imageView.delegate = self;
+//		imageView.delegate = self;
+		imageView.backgroundColor = [UIColor redColor];
 		
 		// sets the image if there is one
-		imageView.image = [(DTImageTextAttachment *)attachment image];
+//		imageView.image = [(DTImageTextAttachment *)attachment image];
 		
 		// url for deferred loading
-		imageView.url = attachment.contentURL;
+//		imageView.url = attachment.contentURL;
 		
 		// if there is a hyperlink then add a link button on top of this image
 		if (attachment.hyperLinkURL)

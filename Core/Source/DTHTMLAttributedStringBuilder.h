@@ -25,7 +25,11 @@ typedef void(^DTHTMLAttributedStringBuilderParseErrorCallback)(NSAttributedStrin
  Class for building an `NSAttributedString` from an HTML document.
  */
 @interface DTHTMLAttributedStringBuilder : NSObject <DTHTMLParserDelegate>
-
+{
+	NSMutableDictionary *_tagStartHandlers;
+	NSMutableDictionary *_tagEndHandlers;
+	DTHTMLElement *_currentTag;
+}
 /**
  @name Creating an Attributed String Builder
  */
