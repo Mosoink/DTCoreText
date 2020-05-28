@@ -14,4 +14,8 @@
 
 @interface DTTextAttachmentHTMLElement : DTHTMLElement
 
+- (instancetype)initWithName:(NSString *)name
+                  attributes:(NSDictionary *)attributes
+                     options:(NSDictionary *)options
+                  attachment:(Class)attachmentClass;
 @end

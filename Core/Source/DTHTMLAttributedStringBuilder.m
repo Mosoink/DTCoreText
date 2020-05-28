@@ -44,7 +44,6 @@
 @implementation DTHTMLAttributedStringBuilder
 {
 	NSData *_data;
-	NSDictionary *_options;
 	BOOL _shouldKeepDocumentNodeTree;
 	
 	// settings for parsing

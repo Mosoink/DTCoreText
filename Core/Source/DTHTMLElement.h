@@ -82,6 +82,8 @@
 	BOOL _shouldProcessCustomHTMLAttributes;
 }
 
++ (void)registerHTMLElement:(Class)element forTag:(NSString *)tag;
+
 /**
  @name Creating HTML Elements
  */

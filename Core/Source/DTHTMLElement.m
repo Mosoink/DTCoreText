@@ -79,6 +79,12 @@ NSDictionary *_classesForNames = nil;
 	_classesForNames = [tmpDict copy];
 }
 
++ (void)registerHTMLElement:(Class)element forTag:(NSString *)tag {
+    NSMutableDictionary *tmpDic = [_classesForNames mutableCopy];
+    [tmpDic setObject:element forKey:tag];
+    _classesForNames = [tmpDic copy];
+}
+
 + (instancetype)elementWithName:(NSString *)name attributes:(NSDictionary *)attributes options:(NSDictionary *)options
 {
 	// look for specialized class

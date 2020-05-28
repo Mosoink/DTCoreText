@@ -18,14 +18,26 @@
 	CGSize _maxDisplaySize;
 }
 
-- (id)initWithName:(NSString *)name attributes:(NSDictionary *)attributes options:(NSDictionary *)options
-{
+- (id)initWithName:(NSString *)name attributes:(NSDictionary *)attributes options:(NSDictionary *)options {
+    return [self initWithName:name attributes:attributes options:options attachment:nil];
+}
+
+- (instancetype)initWithName:(NSString *)name
+                  attributes:(NSDictionary *)attributes
+                     options:(NSDictionary *)options
+                  attachment:(Class)attachmentClass {
+    
 	self = [super initWithName:name attributes:attributes];
 	
 	if (self)
 	{
 		// make appropriate attachment
-		DTTextAttachment *attachment = [DTTextAttachment textAttachmentWithElement:self options:options];
+        DTTextAttachment *attachment;
+        if (attachmentClass) {
+            attachment = [[attachmentClass alloc] initWithElement:self options:options];
+        } else {
+            attachment = attachment ?: [DTTextAttachment textAttachmentWithElement:self options:options];
+        }
 		
 		// add it to tag
 		_textAttachment = attachment;

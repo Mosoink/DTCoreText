@@ -749,12 +749,12 @@ static BOOL _DTCoreTextLayoutFramesShouldDrawDebugFrames = NO;
 		newLine.baselineOrigin = newLineBaselineOrigin;
 		
 		// abort layout if we left the configured frame
-		CGFloat lineBottom = CGRectGetMaxY(newLine.frame);
+		CGFloat lineBottom = CGRectGetMinY(newLine.frame);
 		
 		// screen bottom last line min padding
 		if (newLine.textBlocks.count > 0) {
 			DTTextBlock *lineTextBlock = newLine.textBlocks[0];
-			lineBottom = lineBottom + lineTextBlock.padding.bottom;
+//			lineBottom = lineBottom + lineTextBlock.padding.bottom;
 		}
 		
 		if (lineBottom>maxY)
@@ -894,11 +894,11 @@ static BOOL _DTCoreTextLayoutFramesShouldDrawDebugFrames = NO;
 		CGRect lineFrame = oneLine.frame;
 		
 		// lines before the rect
-		if (CGRectGetMaxY(lineFrame)<minY)
-		{
-			// skip
-			continue;
-		}
+//		if (CGRectGetMaxY(lineFrame)<minY)
+//		{
+//			// skip
+//			continue;
+//		}
 		
 		// line is after the rect
 		if (lineFrame.origin.y > maxY)

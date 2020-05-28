@@ -280,7 +280,6 @@ static Class _layerClassToUseForDTAttributedTextContentView = nil;
 						// frame might be different due to image vertical alignment
 						CGFloat ascender = [attachment ascentForLayout];
 						CGFloat descender = [attachment descentForLayout];
-						
 						frameForSubview = CGRectMake(oneRun.frame.origin.x, oneLine.baselineOrigin.y - ascender, oneRun.frame.size.width, ascender+descender);
 					}
 					else
@@ -303,7 +302,10 @@ static Class _layerClassToUseForDTAttributedTextContentView = nil;
 					frameForSubview.origin.x += _layoutOffset.x;
 					frameForSubview.origin.y += _layoutOffset.y;
 				}
-				
+
+                CGFloat maxWidth = self.bounds.size.width - frameForSubview.origin.x;
+                frameForSubview.size.width = MIN(maxWidth, frameForSubview.size.width);
+                
 				// round frame
 				frameForSubview.origin.x = floor(frameForSubview.origin.x);
 				frameForSubview.origin.y = ceil(frameForSubview.origin.y);

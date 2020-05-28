@@ -20,6 +20,10 @@
 #import "UIFont+DTCoreText.h"
 #endif
 
+DTHTMLElementAttributeName DTListItemPrefixFontAttributeName   = @"DTListItemPrefixFontAttributeName";
+DTHTMLElementAttributeName DTListItemPrefixColorAttributeName  = @"DTListItemPrefixColorAttributeName";
+
+
 @implementation DTListItemHTMLElement
 
 - (NSUInteger)_indexOfListItemInListRoot:(DTHTMLElement *)listRoot
@@ -159,8 +163,18 @@
 	// make a font without italic or bold
 	fontDescriptor.boldTrait = NO;
 	fontDescriptor.italicTrait = NO;
-	
-	CTFontRef font = [fontDescriptor newMatchingFont];
+    
+    DTFont *pFont = [_addonAtts valueForKey:DTListItemPrefixFontAttributeName];
+    DTColor *fontColor = [_addonAtts valueForKey:DTListItemPrefixColorAttributeName];
+    
+    CTFontRef font;
+    if (pFont) {
+        font = CTFontCreateWithName((__bridge CFStringRef)pFont.fontName, pFont.pointSize, NULL);
+//        font = (__bridge CTFontRef)(pFont);
+    } else {
+        font = [fontDescriptor newMatchingFont];
+    }
+    
 	
 	if (font)
 	{
@@ -179,23 +193,28 @@
 		}
 	}
 	
-	CGColorRef textColor = (__bridge CGColorRef)[attributes objectForKey:(id)kCTForegroundColorAttributeName];
-	
-	if (textColor)
-	{
-		[newAttributes setObject:(__bridge id)textColor forKey:(id)kCTForegroundColorAttributeName];
-	}
-#if DTCORETEXT_SUPPORT_NS_ATTRIBUTES
-	else if (___useiOS6Attributes)
-	{
-		DTColor *uiColor = [attributes foregroundColor];
-		
-		if (uiColor)
-		{
-			[newAttributes setObject:uiColor forKey:NSForegroundColorAttributeName];
-		}
-	}
-#endif
+    if (fontColor) {
+        [newAttributes setObject:(__bridge id)fontColor.CGColor forKey:(id)kCTForegroundColorAttributeName];
+    } else {
+        CGColorRef textColor = (__bridge CGColorRef)[attributes objectForKey:(id)kCTForegroundColorAttributeName];
+        
+        if (textColor)
+        {
+            [newAttributes setObject:(__bridge id)textColor forKey:(id)kCTForegroundColorAttributeName];
+        }
+    #if DTCORETEXT_SUPPORT_NS_ATTRIBUTES
+        else if (___useiOS6Attributes)
+        {
+            DTColor *uiColor = [attributes foregroundColor];
+            
+            if (uiColor)
+            {
+                [newAttributes setObject:uiColor forKey:NSForegroundColorAttributeName];
+            }
+        }
+    #endif
+    }
+
 	
 	// add paragraph style (this has the tabs)
 	if (paragraphStyle)

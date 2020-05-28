@@ -10,6 +10,8 @@
 
 #if TARGET_OS_IPHONE
 
+    #import <UIKit/UIKit.h>
+
 	// Compatibility Aliases
 	#define DTColor UIColor
 	#define DTImage UIImage

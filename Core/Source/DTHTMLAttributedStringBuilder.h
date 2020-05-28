@@ -29,6 +29,7 @@ typedef void(^DTHTMLAttributedStringBuilderParseErrorCallback)(NSAttributedStrin
 	NSMutableDictionary *_tagStartHandlers;
 	NSMutableDictionary *_tagEndHandlers;
 	DTHTMLElement *_currentTag;
+    NSDictionary  *_options;
 }
 /**
  @name Creating an Attributed String Builder

@@ -8,9 +8,16 @@
 
 #import "DTHTMLElement.h"
 
+typedef NSString* DTHTMLElementAttributeName;
+
+FOUNDATION_EXPORT DTHTMLElementAttributeName DTListItemPrefixFontAttributeName;
+FOUNDATION_EXPORT DTHTMLElementAttributeName DTListItemPrefixColorAttributeName;
+
 /**
  Specialized subclass of <DTHTMLElement> that deals with list items.
  */
 @interface DTListItemHTMLElement : DTHTMLElement
+
+@property (nonatomic, copy) NSDictionary *addonAtts;
 
 @end
