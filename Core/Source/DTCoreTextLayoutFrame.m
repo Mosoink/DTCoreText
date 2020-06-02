@@ -1400,9 +1400,12 @@ static BOOL _DTCoreTextLayoutFramesShouldDrawDebugFrames = NO;
 				
 				// frame might be different due to image vertical alignment
 				CGFloat ascender = [attachment ascentForLayout];
-				CGRect rect = CGRectMake(oneRun.frame.origin.x, oneLine.baselineOrigin.y - ascender, attachment.displaySize.width, attachment.displaySize.height);
+				CGRect rect1 = CGRectMake(oneRun.frame.origin.x, oneLine.baselineOrigin.y - ascender, attachment.displaySize.width, attachment.displaySize.height);
 				
-				[drawableAttachment drawInRect:rect context:context];
+                CGFloat maxWidth = CGRectGetMaxX(rect) - rect1.origin.x;
+                rect1.size.width = MIN(maxWidth, rect1.size.width);
+
+				[drawableAttachment drawInRect:rect1 context:context];
 			}
 			
 			if (!drawLinks && oneRun.isHyperlink)
