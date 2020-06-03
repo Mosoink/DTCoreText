@@ -40,7 +40,9 @@
 	// find closest line
 	DTCoreTextLayoutLine *closestLine = nil;
 	CGFloat closestDistance = CGFLOAT_MAX;
-	
+    CGFloat top;
+    CGFloat bottom;
+    CGFloat distance;
 	for (DTCoreTextLayoutLine *oneLine in lines)
 	{
 		// line contains point
@@ -50,10 +52,10 @@
 			break;
 		}
 		
-		CGFloat top = CGRectGetMinY(oneLine.frame);
-		CGFloat bottom = CGRectGetMaxY(oneLine.frame);
+		top = CGRectGetMinY(oneLine.frame);
+		bottom = CGRectGetMaxY(oneLine.frame);
 		
-		CGFloat distance = CGFLOAT_MAX;
+		distance = CGFLOAT_MAX;
 		
 		if (top > point.y)
 		{

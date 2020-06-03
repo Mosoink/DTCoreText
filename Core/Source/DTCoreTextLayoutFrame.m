@@ -440,344 +440,346 @@ static BOOL _DTCoreTextLayoutFramesShouldDrawDebugFrames = NO;
 	
 	do  // for each line
 	{
-		while (lineRange.location >= (currentParagraphRange.location+currentParagraphRange.length))
-		{
-			// we are outside of this paragraph, so we go to the next
-			[paragraphRanges removeObjectAtIndex:0];
-			
-			currentParagraphRange = [[paragraphRanges objectAtIndex:0] rangeValue];
-		}
-		
-		BOOL isAtBeginOfParagraph = (currentParagraphRange.location == lineRange.location);
-		
-		CGFloat headIndent = 0;
-		CGFloat tailIndent = 0;
-		
-		// get the paragraph style at this index
-		CTParagraphStyleRef paragraphStyle = (__bridge CTParagraphStyleRef)[_attributedStringFragment attribute:(id)kCTParagraphStyleAttributeName atIndex:lineRange.location effectiveRange:NULL];
-		
-		if (isAtBeginOfParagraph)
-		{
-			CTParagraphStyleGetValueForSpecifier(paragraphStyle, kCTParagraphStyleSpecifierFirstLineHeadIndent, sizeof(headIndent), &headIndent);
-		}
-		else
-		{
-			CTParagraphStyleGetValueForSpecifier(paragraphStyle, kCTParagraphStyleSpecifierHeadIndent, sizeof(headIndent), &headIndent);
-		}
-		
-		CTParagraphStyleGetValueForSpecifier(paragraphStyle, kCTParagraphStyleSpecifierTailIndent, sizeof(tailIndent), &tailIndent);
-		
-		// add left padding to offset
-		CGFloat lineOriginX;
-		CGFloat availableSpace;
-		
-		NSArray *textBlocks = [_attributedStringFragment attribute:DTTextBlocksAttribute atIndex:lineRange.location effectiveRange:NULL];
-		CGFloat totalLeftPadding = 0;
-		CGFloat totalRightPadding = 0;
-		
-		for (DTTextBlock *oneTextBlock in textBlocks)
-		{
-			totalLeftPadding += oneTextBlock.padding.left;
-			totalRightPadding += oneTextBlock.padding.right;
-		}
-		
-		if (tailIndent<=0)
-		{
-			// negative tail indent is measured from trailing margin (we assume LTR here)
-			availableSpace = _frame.size.width - headIndent - totalRightPadding + tailIndent - totalLeftPadding;
-		}
-		else
-		{
-			availableSpace = tailIndent - headIndent - totalLeftPadding - totalRightPadding;
-		}
-		
-		
-		CGFloat offset = totalLeftPadding;
-		
-		// if first character is a tab, then it is positioned without the indentation
-		if (![[[_attributedStringFragment string] substringWithRange:NSMakeRange(lineRange.location, 1)] isEqualToString:@"\t"])
-		{
-			offset += headIndent;
-		}
-		
-		// find how many characters we get into this line
-		lineRange.length = CTTypesetterSuggestLineBreak(typesetter, lineRange.location, availableSpace);
-		
-		if (NSMaxRange(lineRange) > maxIndex)
-		{
-			// only layout as much as was requested
-			lineRange.length = maxIndex - lineRange.location;
-		}
-		
-		
-		// determine whether this is a normal line or if it should be truncated
-		shouldTruncateLine = ((self.numberOfLines>0 && [typesetLines count]+1==self.numberOfLines) || (_numberLinesFitInFrame>0 && _numberLinesFitInFrame==[typesetLines count]+1));
-		
-		CTLineRef line;
-		BOOL isHyphenatedString = NO;
-		
-		if (!shouldTruncateLine)
-		{
-			static const unichar softHypen = 0x00AD;
-			NSString *lineString = [[_attributedStringFragment attributedSubstringFromRange:lineRange] string];
-			unichar lastChar = [lineString characterAtIndex:[lineString length] - 1];
-			if (softHypen == lastChar)
-			{
-				NSMutableAttributedString *hyphenatedString = [[_attributedStringFragment attributedSubstringFromRange:lineRange] mutableCopy];
-				NSRange replaceRange = NSMakeRange(hyphenatedString.length - 1, 1);
-				[hyphenatedString replaceCharactersInRange:replaceRange withString:@"-"];
-				line = CTLineCreateWithAttributedString((__bridge CFAttributedStringRef)hyphenatedString);
-				isHyphenatedString = YES;
-			}
-			else
-			{
-				// create a line to fit
-				line = CTTypesetterCreateLine(typesetter, CFRangeMake(lineRange.location, lineRange.length));
-			}
-		}
-		else
-		{
-			// extend the line to the end of the current paragraph
-			// if we extend to the entire to the entire text range
-			// it is possible to pull lines up from paragraphs below us
-			NSRange oldLineRange = lineRange;
-			lineRange.length = maxIndex-lineRange.location;
-			CTLineRef baseLine = CTTypesetterCreateLine(typesetter, CFRangeMake(lineRange.location, lineRange.length));
-			
-			// convert lineBreakMode to CoreText type
-			CTLineTruncationType truncationType = DTCTLineTruncationTypeFromNSLineBreakMode(self.lineBreakMode);
-			
-			// prepare truncation string
-			NSAttributedString * attribStr = self.truncationString;
-			if(attribStr == nil)
-			{
-				NSRange range;
-				NSInteger index = oldLineRange.location;
-				if (truncationType == kCTLineTruncationEnd)
-				{
-					index += (oldLineRange.length > 0 ? oldLineRange.length - 1 : 0);
-				}
-				else if (truncationType == kCTLineTruncationMiddle)
-				{
-					index += (oldLineRange.length > 1 ? (oldLineRange.length/2.0 - 1) : 0);
-				}
-				NSDictionary * attributes = [_attributedStringFragment attributesAtIndex:index effectiveRange:&range];
-				attribStr = [[NSAttributedString alloc] initWithString:@"…" attributes:attributes];
-			}
-			
-			CTLineRef elipsisLineRef = CTLineCreateWithAttributedString((__bridge  CFAttributedStringRef)(attribStr));
-			
-			// create the truncated line
-			line = CTLineCreateTruncatedLine(baseLine, availableSpace, truncationType, elipsisLineRef);
-            
-            // check if truncation occurred
-            BOOL truncationOccured = !areLinesEqual(baseLine, line);
-            // if yes check was it before the end of the current paragraph or after
-            NSUInteger endOfParagraphIndex = NSMaxRange(currentParagraphRange);
-            // this works only for truncation at the end
-            if (truncationType == kCTLineTruncationEnd)
-            {
-                if (truncationOccured)
-                {
-                    CFIndex truncationIndex = getTruncationIndex(line, elipsisLineRef);
-                    // if truncation occurred after the end of the paragraph
-                    // move truncation token to the end of the paragraph
-                    if (truncationIndex > endOfParagraphIndex)
+        @autoreleasepool {
+            while (lineRange.location >= (currentParagraphRange.location+currentParagraphRange.length))
                     {
-                        NSAttributedString *subStr = [_attributedStringFragment attributedSubstringFromRange:NSMakeRange(lineRange.location, endOfParagraphIndex - lineRange.location - 1)];
-                        NSMutableAttributedString *attrMutStr = [subStr mutableCopy];
-                        [attrMutStr appendAttributedString:attribStr];
-                        CFRelease(line);
-                        line = CTLineCreateWithAttributedString((__bridge  CFAttributedStringRef)(attrMutStr));
+                        // we are outside of this paragraph, so we go to the next
+                        [paragraphRanges removeObjectAtIndex:0];
+                        
+                        currentParagraphRange = [[paragraphRanges objectAtIndex:0] rangeValue];
                     }
-                    // otherwise, everything is OK
-                }
-                else
-                {
-                    // if no truncation happened, force addition of
-                    // the truncation token to the end of the paragraph
-                    if (maxIndex != endOfParagraphIndex)
+                    
+                    BOOL isAtBeginOfParagraph = (currentParagraphRange.location == lineRange.location);
+                    
+                    CGFloat headIndent = 0;
+                    CGFloat tailIndent = 0;
+                    
+                    // get the paragraph style at this index
+                    CTParagraphStyleRef paragraphStyle = (__bridge CTParagraphStyleRef)[_attributedStringFragment attribute:(id)kCTParagraphStyleAttributeName atIndex:lineRange.location effectiveRange:NULL];
+                    
+                    if (isAtBeginOfParagraph)
                     {
-                        NSAttributedString *subStr = [_attributedStringFragment attributedSubstringFromRange:NSMakeRange(lineRange.location, endOfParagraphIndex - lineRange.location - 1)];
-                        NSMutableAttributedString *attrMutStr = [subStr mutableCopy];
-                        [attrMutStr appendAttributedString:attribStr];
-                        CFRelease(line);
-                        line = CTLineCreateWithAttributedString((__bridge  CFAttributedStringRef)(attrMutStr));
+                        CTParagraphStyleGetValueForSpecifier(paragraphStyle, kCTParagraphStyleSpecifierFirstLineHeadIndent, sizeof(headIndent), &headIndent);
                     }
-                }
-            }
-			
-			// clean up
-			CFRelease(baseLine);
-			CFRelease(elipsisLineRef);
-		}
-		
-		// we need all metrics so get the at once
-		CGFloat currentLineWidth = (CGFloat)CTLineGetTypographicBounds(line, NULL, NULL, NULL);
-		
-		// adjust lineOrigin based on paragraph text alignment
-		CTTextAlignment textAlignment;
-		
-		if (!CTParagraphStyleGetValueForSpecifier(paragraphStyle, kCTParagraphStyleSpecifierAlignment, sizeof(textAlignment), &textAlignment))
-		{
-#if DTCORETEXT_SUPPORT_NS_ATTRIBUTES
-			textAlignment = kCTTextAlignmentNatural;
-#else
-			textAlignment = kCTNaturalTextAlignment;
-#endif
-		}
-		
-		// determine writing direction
-		BOOL isRTL = NO;
-		CTWritingDirection baseWritingDirection;
-		
-		if (CTParagraphStyleGetValueForSpecifier(paragraphStyle, kCTParagraphStyleSpecifierBaseWritingDirection, sizeof(baseWritingDirection), &baseWritingDirection))
-		{
-			isRTL = (baseWritingDirection == kCTWritingDirectionRightToLeft);
-		}
-		else
-		{
-			baseWritingDirection = kCTWritingDirectionNatural;
-		}
-		
-		switch (textAlignment)
-		{
-				
-#if DTCORETEXT_SUPPORT_NS_ATTRIBUTES
-			case kCTTextAlignmentLeft:
-#else
-			case kCTLeftTextAlignment:
-#endif
-			{
-				lineOriginX = _frame.origin.x + offset;
-				// nothing to do
-				break;
-			}
-				
-#if DTCORETEXT_SUPPORT_NS_ATTRIBUTES
-			case kCTTextAlignmentNatural:
-#else
-			case kCTNaturalTextAlignment:
-#endif
-			{
-				lineOriginX = _frame.origin.x + offset;
-				
-				if (baseWritingDirection != kCTWritingDirectionRightToLeft)
-				{
-					break;
-				}
-				
-				// right alignment falls through
-			}
-				
-#if DTCORETEXT_SUPPORT_NS_ATTRIBUTES
-			case kCTTextAlignmentRight:
-#else
-			case kCTRightTextAlignment:
-#endif
-			{
-				lineOriginX = _frame.origin.x + offset + (CGFloat)CTLineGetPenOffsetForFlush(line, 1.0, availableSpace);
-				
-				break;
-			}
-				
-#if DTCORETEXT_SUPPORT_NS_ATTRIBUTES
-			case kCTTextAlignmentCenter:
-#else
-			case kCTCenterTextAlignment:
-#endif
-			{
-				lineOriginX = _frame.origin.x + offset + (CGFloat)CTLineGetPenOffsetForFlush(line, 0.5, availableSpace);
-				
-				break;
-			}
-				
-#if DTCORETEXT_SUPPORT_NS_ATTRIBUTES
-			case kCTTextAlignmentJustified:
-#else
-			case kCTJustifiedTextAlignment:
-#endif
-			{
-				BOOL isAtEndOfParagraph  = (currentParagraphRange.location+currentParagraphRange.length <= lineRange.location+lineRange.length ||
-											[[_attributedStringFragment string] characterAtIndex:lineRange.location+lineRange.length-1]==0x2028);
-				
-				// only justify if not last line, not <br>, and if the line width is longer than _justifyRatio of the frame
-				// avoids over-stretching
-				if( !isAtEndOfParagraph && (currentLineWidth > _justifyRatio * _frame.size.width) )
-				{
-					// create a justified line and replace the current one with it
-					CTLineRef justifiedLine = CTLineCreateJustifiedLine(line, 1.0f, availableSpace);
-					
-					// CTLineCreateJustifiedLine sometimes fails if the line ends with 0x00AD (soft hyphen) and contains cyrillic chars
-					if (justifiedLine)
-					{
-						CFRelease(line);
-						line = justifiedLine;
-					}
-				}
-				
-				if (isRTL)
-				{
-					// align line with right margin
-					lineOriginX = _frame.origin.x + offset + (CGFloat)CTLineGetPenOffsetForFlush(line, 1.0, availableSpace);
-				}
-				else
-				{
-					// align line with left margin
-					lineOriginX = _frame.origin.x + offset;
-				}
-				
-				break;
-			}
-		}
-		
-		if (!line)
-		{
-			continue;
-		}
-		
-		// wrap it
-		DTCoreTextLayoutLine *newLine = [[DTCoreTextLayoutLine alloc] initWithLine:line
-															  stringLocationOffset:isHyphenatedString ? lineRange.location : 0];
-		newLine.writingDirectionIsRightToLeft = isRTL;
-		CFRelease(line);
-		
-		// determine position of line based on line before it
-		
-		CGPoint newLineBaselineOrigin = [self _algorithmWebKit_BaselineOriginToPositionLine:newLine afterLine:previousLine];
-		newLineBaselineOrigin.x = lineOriginX;
-		newLine.baselineOrigin = newLineBaselineOrigin;
-		
-		// abort layout if we left the configured frame
-		CGFloat lineBottom = CGRectGetMinY(newLine.frame);
-		
-		// screen bottom last line min padding
-		if (newLine.textBlocks.count > 0) {
-			DTTextBlock *lineTextBlock = newLine.textBlocks[0];
-//			lineBottom = lineBottom + lineTextBlock.padding.bottom;
-		}
-		
-		if (lineBottom>maxY)
-		{
-			if ([typesetLines count] && self.lineBreakMode)
-			{
-				_numberLinesFitInFrame = [typesetLines count];
-				[self _buildLinesWithTypesetter];
-				
-				return;
-			}
-			else
-			{
-				// doesn't fit any more
-				break;
-			}
-		}
-		
-		[typesetLines addObject:newLine];
-		fittingLength += lineRange.length;
-		
-		lineRange.location += lineRange.length;
-		previousLine = newLine;
+                    else
+                    {
+                        CTParagraphStyleGetValueForSpecifier(paragraphStyle, kCTParagraphStyleSpecifierHeadIndent, sizeof(headIndent), &headIndent);
+                    }
+                    
+                    CTParagraphStyleGetValueForSpecifier(paragraphStyle, kCTParagraphStyleSpecifierTailIndent, sizeof(tailIndent), &tailIndent);
+                    
+                    // add left padding to offset
+                    CGFloat lineOriginX;
+                    CGFloat availableSpace;
+                    
+                    NSArray *textBlocks = [_attributedStringFragment attribute:DTTextBlocksAttribute atIndex:lineRange.location effectiveRange:NULL];
+                    CGFloat totalLeftPadding = 0;
+                    CGFloat totalRightPadding = 0;
+                    
+                    for (DTTextBlock *oneTextBlock in textBlocks)
+                    {
+                        totalLeftPadding += oneTextBlock.padding.left;
+                        totalRightPadding += oneTextBlock.padding.right;
+                    }
+                    
+                    if (tailIndent<=0)
+                    {
+                        // negative tail indent is measured from trailing margin (we assume LTR here)
+                        availableSpace = _frame.size.width - headIndent - totalRightPadding + tailIndent - totalLeftPadding;
+                    }
+                    else
+                    {
+                        availableSpace = tailIndent - headIndent - totalLeftPadding - totalRightPadding;
+                    }
+                    
+                    
+                    CGFloat offset = totalLeftPadding;
+                    
+                    // if first character is a tab, then it is positioned without the indentation
+                    if (![[[_attributedStringFragment string] substringWithRange:NSMakeRange(lineRange.location, 1)] isEqualToString:@"\t"])
+                    {
+                        offset += headIndent;
+                    }
+                    
+                    // find how many characters we get into this line
+                    lineRange.length = CTTypesetterSuggestLineBreak(typesetter, lineRange.location, availableSpace);
+                    
+                    if (NSMaxRange(lineRange) > maxIndex)
+                    {
+                        // only layout as much as was requested
+                        lineRange.length = maxIndex - lineRange.location;
+                    }
+                    
+                    
+                    // determine whether this is a normal line or if it should be truncated
+                    shouldTruncateLine = ((self.numberOfLines>0 && [typesetLines count]+1==self.numberOfLines) || (_numberLinesFitInFrame>0 && _numberLinesFitInFrame==[typesetLines count]+1));
+                    
+                    CTLineRef line;
+                    BOOL isHyphenatedString = NO;
+                    
+                    if (!shouldTruncateLine)
+                    {
+                        static const unichar softHypen = 0x00AD;
+                        NSString *lineString = [[_attributedStringFragment attributedSubstringFromRange:lineRange] string];
+                        unichar lastChar = [lineString characterAtIndex:[lineString length] - 1];
+                        if (softHypen == lastChar)
+                        {
+                            NSMutableAttributedString *hyphenatedString = [[_attributedStringFragment attributedSubstringFromRange:lineRange] mutableCopy];
+                            NSRange replaceRange = NSMakeRange(hyphenatedString.length - 1, 1);
+                            [hyphenatedString replaceCharactersInRange:replaceRange withString:@"-"];
+                            line = CTLineCreateWithAttributedString((__bridge CFAttributedStringRef)hyphenatedString);
+                            isHyphenatedString = YES;
+                        }
+                        else
+                        {
+                            // create a line to fit
+                            line = CTTypesetterCreateLine(typesetter, CFRangeMake(lineRange.location, lineRange.length));
+                        }
+                    }
+                    else
+                    {
+                        // extend the line to the end of the current paragraph
+                        // if we extend to the entire to the entire text range
+                        // it is possible to pull lines up from paragraphs below us
+                        NSRange oldLineRange = lineRange;
+                        lineRange.length = maxIndex-lineRange.location;
+                        CTLineRef baseLine = CTTypesetterCreateLine(typesetter, CFRangeMake(lineRange.location, lineRange.length));
+                        
+                        // convert lineBreakMode to CoreText type
+                        CTLineTruncationType truncationType = DTCTLineTruncationTypeFromNSLineBreakMode(self.lineBreakMode);
+                        
+                        // prepare truncation string
+                        NSAttributedString * attribStr = self.truncationString;
+                        if(attribStr == nil)
+                        {
+                            NSRange range;
+                            NSInteger index = oldLineRange.location;
+                            if (truncationType == kCTLineTruncationEnd)
+                            {
+                                index += (oldLineRange.length > 0 ? oldLineRange.length - 1 : 0);
+                            }
+                            else if (truncationType == kCTLineTruncationMiddle)
+                            {
+                                index += (oldLineRange.length > 1 ? (oldLineRange.length/2.0 - 1) : 0);
+                            }
+                            NSDictionary * attributes = [_attributedStringFragment attributesAtIndex:index effectiveRange:&range];
+                            attribStr = [[NSAttributedString alloc] initWithString:@"…" attributes:attributes];
+                        }
+                        
+                        CTLineRef elipsisLineRef = CTLineCreateWithAttributedString((__bridge  CFAttributedStringRef)(attribStr));
+                        
+                        // create the truncated line
+                        line = CTLineCreateTruncatedLine(baseLine, availableSpace, truncationType, elipsisLineRef);
+                        
+                        // check if truncation occurred
+                        BOOL truncationOccured = !areLinesEqual(baseLine, line);
+                        // if yes check was it before the end of the current paragraph or after
+                        NSUInteger endOfParagraphIndex = NSMaxRange(currentParagraphRange);
+                        // this works only for truncation at the end
+                        if (truncationType == kCTLineTruncationEnd)
+                        {
+                            if (truncationOccured)
+                            {
+                                CFIndex truncationIndex = getTruncationIndex(line, elipsisLineRef);
+                                // if truncation occurred after the end of the paragraph
+                                // move truncation token to the end of the paragraph
+                                if (truncationIndex > endOfParagraphIndex)
+                                {
+                                    NSAttributedString *subStr = [_attributedStringFragment attributedSubstringFromRange:NSMakeRange(lineRange.location, endOfParagraphIndex - lineRange.location - 1)];
+                                    NSMutableAttributedString *attrMutStr = [subStr mutableCopy];
+                                    [attrMutStr appendAttributedString:attribStr];
+                                    CFRelease(line);
+                                    line = CTLineCreateWithAttributedString((__bridge  CFAttributedStringRef)(attrMutStr));
+                                }
+                                // otherwise, everything is OK
+                            }
+                            else
+                            {
+                                // if no truncation happened, force addition of
+                                // the truncation token to the end of the paragraph
+                                if (maxIndex != endOfParagraphIndex)
+                                {
+                                    NSAttributedString *subStr = [_attributedStringFragment attributedSubstringFromRange:NSMakeRange(lineRange.location, endOfParagraphIndex - lineRange.location - 1)];
+                                    NSMutableAttributedString *attrMutStr = [subStr mutableCopy];
+                                    [attrMutStr appendAttributedString:attribStr];
+                                    CFRelease(line);
+                                    line = CTLineCreateWithAttributedString((__bridge  CFAttributedStringRef)(attrMutStr));
+                                }
+                            }
+                        }
+                        
+                        // clean up
+                        CFRelease(baseLine);
+                        CFRelease(elipsisLineRef);
+                    }
+                    
+                    // we need all metrics so get the at once
+                    CGFloat currentLineWidth = (CGFloat)CTLineGetTypographicBounds(line, NULL, NULL, NULL);
+                    
+                    // adjust lineOrigin based on paragraph text alignment
+                    CTTextAlignment textAlignment;
+                    
+                    if (!CTParagraphStyleGetValueForSpecifier(paragraphStyle, kCTParagraphStyleSpecifierAlignment, sizeof(textAlignment), &textAlignment))
+                    {
+            #if DTCORETEXT_SUPPORT_NS_ATTRIBUTES
+                        textAlignment = kCTTextAlignmentNatural;
+            #else
+                        textAlignment = kCTNaturalTextAlignment;
+            #endif
+                    }
+                    
+                    // determine writing direction
+                    BOOL isRTL = NO;
+                    CTWritingDirection baseWritingDirection;
+                    
+                    if (CTParagraphStyleGetValueForSpecifier(paragraphStyle, kCTParagraphStyleSpecifierBaseWritingDirection, sizeof(baseWritingDirection), &baseWritingDirection))
+                    {
+                        isRTL = (baseWritingDirection == kCTWritingDirectionRightToLeft);
+                    }
+                    else
+                    {
+                        baseWritingDirection = kCTWritingDirectionNatural;
+                    }
+                    
+                    switch (textAlignment)
+                    {
+                            
+            #if DTCORETEXT_SUPPORT_NS_ATTRIBUTES
+                        case kCTTextAlignmentLeft:
+            #else
+                        case kCTLeftTextAlignment:
+            #endif
+                        {
+                            lineOriginX = _frame.origin.x + offset;
+                            // nothing to do
+                            break;
+                        }
+                            
+            #if DTCORETEXT_SUPPORT_NS_ATTRIBUTES
+                        case kCTTextAlignmentNatural:
+            #else
+                        case kCTNaturalTextAlignment:
+            #endif
+                        {
+                            lineOriginX = _frame.origin.x + offset;
+                            
+                            if (baseWritingDirection != kCTWritingDirectionRightToLeft)
+                            {
+                                break;
+                            }
+                            
+                            // right alignment falls through
+                        }
+                            
+            #if DTCORETEXT_SUPPORT_NS_ATTRIBUTES
+                        case kCTTextAlignmentRight:
+            #else
+                        case kCTRightTextAlignment:
+            #endif
+                        {
+                            lineOriginX = _frame.origin.x + offset + (CGFloat)CTLineGetPenOffsetForFlush(line, 1.0, availableSpace);
+                            
+                            break;
+                        }
+                            
+            #if DTCORETEXT_SUPPORT_NS_ATTRIBUTES
+                        case kCTTextAlignmentCenter:
+            #else
+                        case kCTCenterTextAlignment:
+            #endif
+                        {
+                            lineOriginX = _frame.origin.x + offset + (CGFloat)CTLineGetPenOffsetForFlush(line, 0.5, availableSpace);
+                            
+                            break;
+                        }
+                            
+            #if DTCORETEXT_SUPPORT_NS_ATTRIBUTES
+                        case kCTTextAlignmentJustified:
+            #else
+                        case kCTJustifiedTextAlignment:
+            #endif
+                        {
+                            BOOL isAtEndOfParagraph  = (currentParagraphRange.location+currentParagraphRange.length <= lineRange.location+lineRange.length ||
+                                                        [[_attributedStringFragment string] characterAtIndex:lineRange.location+lineRange.length-1]==0x2028);
+                            
+                            // only justify if not last line, not <br>, and if the line width is longer than _justifyRatio of the frame
+                            // avoids over-stretching
+                            if( !isAtEndOfParagraph && (currentLineWidth > _justifyRatio * _frame.size.width) )
+                            {
+                                // create a justified line and replace the current one with it
+                                CTLineRef justifiedLine = CTLineCreateJustifiedLine(line, 1.0f, availableSpace);
+                                
+                                // CTLineCreateJustifiedLine sometimes fails if the line ends with 0x00AD (soft hyphen) and contains cyrillic chars
+                                if (justifiedLine)
+                                {
+                                    CFRelease(line);
+                                    line = justifiedLine;
+                                }
+                            }
+                            
+                            if (isRTL)
+                            {
+                                // align line with right margin
+                                lineOriginX = _frame.origin.x + offset + (CGFloat)CTLineGetPenOffsetForFlush(line, 1.0, availableSpace);
+                            }
+                            else
+                            {
+                                // align line with left margin
+                                lineOriginX = _frame.origin.x + offset;
+                            }
+                            
+                            break;
+                        }
+                    }
+                    
+                    if (!line)
+                    {
+                        continue;
+                    }
+                    
+                    // wrap it
+                    DTCoreTextLayoutLine *newLine = [[DTCoreTextLayoutLine alloc] initWithLine:line
+                                                                          stringLocationOffset:isHyphenatedString ? lineRange.location : 0];
+                    newLine.writingDirectionIsRightToLeft = isRTL;
+                    CFRelease(line);
+                    
+                    // determine position of line based on line before it
+                    
+                    CGPoint newLineBaselineOrigin = [self _algorithmWebKit_BaselineOriginToPositionLine:newLine afterLine:previousLine];
+                    newLineBaselineOrigin.x = lineOriginX;
+                    newLine.baselineOrigin = newLineBaselineOrigin;
+                    
+                    // abort layout if we left the configured frame
+                    CGFloat lineBottom = CGRectGetMinY(newLine.frame);
+                    
+                    // screen bottom last line min padding
+                    if (newLine.textBlocks.count > 0) {
+                        DTTextBlock *lineTextBlock = newLine.textBlocks[0];
+            //            lineBottom = lineBottom + lineTextBlock.padding.bottom;
+                    }
+                    
+                    if (lineBottom>maxY)
+                    {
+                        if ([typesetLines count] && self.lineBreakMode)
+                        {
+                            _numberLinesFitInFrame = [typesetLines count];
+                            [self _buildLinesWithTypesetter];
+                            
+                            return;
+                        }
+                        else
+                        {
+                            // doesn't fit any more
+                            break;
+                        }
+                    }
+                    
+                    [typesetLines addObject:newLine];
+                    fittingLength += lineRange.length;
+                    
+                    lineRange.location += lineRange.length;
+                    previousLine = newLine;
+        }
 	}
 	while (lineRange.location < maxIndex && !shouldTruncateLine);
 	
@@ -834,14 +836,16 @@ static BOOL _DTCoreTextLayoutFramesShouldDrawDebugFrames = NO;
 	
 	NSInteger lineIndex = 0;
 	
+    CGPoint lineOrigin;
+    DTCoreTextLayoutLine *newLine;
 	for (id oneLine in (__bridge NSArray *)cflines)
 	{
-		CGPoint lineOrigin = origins[lineIndex];
+		lineOrigin = origins[lineIndex];
 		
 		lineOrigin.y = _frame.size.height - lineOrigin.y + _frame.origin.y;
 		lineOrigin.x += _frame.origin.x;
 		
-		DTCoreTextLayoutLine *newLine = [[DTCoreTextLayoutLine alloc] initWithLine:(__bridge CTLineRef)oneLine];
+		newLine = [[DTCoreTextLayoutLine alloc] initWithLine:(__bridge CTLineRef)oneLine];
 		newLine.baselineOrigin = lineOrigin;
 		
 		[tmpLines addObject:newLine];
@@ -888,10 +892,10 @@ static BOOL _DTCoreTextLayoutFramesShouldDrawDebugFrames = NO;
 	
 	CGFloat minY = CGRectGetMinY(rect);
 	CGFloat maxY = CGRectGetMaxY(rect);
-	
+    CGRect lineFrame;
 	for (DTCoreTextLayoutLine *oneLine in self.lines)
 	{
-		CGRect lineFrame = oneLine.frame;
+		lineFrame = oneLine.frame;
 		
 		// lines before the rect
 //		if (CGRectGetMaxY(lineFrame)<minY)
@@ -926,10 +930,10 @@ static BOOL _DTCoreTextLayoutFramesShouldDrawDebugFrames = NO;
 	
 	CGFloat minY = CGRectGetMinY(rect);
 	CGFloat maxY = CGRectGetMaxY(rect);
-	
+    CGRect lineFrame;
 	for (DTCoreTextLayoutLine *oneLine in self.lines)
 	{
-		CGRect lineFrame = oneLine.frame;
+		lineFrame = oneLine.frame;
 		
 		// lines before the rect
 		if (CGRectGetMaxY(lineFrame)<minY)
@@ -991,6 +995,7 @@ static BOOL _DTCoreTextLayoutFramesShouldDrawDebugFrames = NO;
 	}
 	
     // top paddings we get from first line
+    DTTextBlock *oneTextBlock;
     for (NSInteger i = [firstBlockLine.textBlocks count]-1; i>=level;i--)
     {
         if (i<0)
@@ -998,7 +1003,7 @@ static BOOL _DTCoreTextLayoutFramesShouldDrawDebugFrames = NO;
             break;
         }
         
-        DTTextBlock *oneTextBlock = [firstBlockLine.textBlocks objectAtIndex:i];
+        oneTextBlock = [firstBlockLine.textBlocks objectAtIndex:i];
         
         blockFrame.origin.y -= oneTextBlock.padding.top;
         blockFrame.size.height += oneTextBlock.padding.top;
@@ -1012,15 +1017,16 @@ static BOOL _DTCoreTextLayoutFramesShouldDrawDebugFrames = NO;
             break;
         }
         
-        DTTextBlock *oneTextBlock = [lastBlockLine.textBlocks objectAtIndex:i];
+        oneTextBlock = [lastBlockLine.textBlocks objectAtIndex:i];
         
         blockFrame.size.height += oneTextBlock.padding.bottom;
     }
     
+    DTTextBlock *textBlock;
     // adjust left and right margins with block stack padding
     for (int i=0; i<level; i++)
     {
-        DTTextBlock *textBlock = [firstBlockLine.textBlocks objectAtIndex:i];
+        textBlock = [firstBlockLine.textBlocks objectAtIndex:i];
         
         blockFrame.origin.x += textBlock.padding.left;
         blockFrame.size.width -= (textBlock.padding.left + textBlock.padding.right);
@@ -1045,53 +1051,55 @@ static BOOL _DTCoreTextLayoutFramesShouldDrawDebugFrames = NO;
 		
 		while (index<NSMaxRange(range))
 		{
-			NSRange textBlocksArrayRange;
-			NSArray *textBlocks = [_attributedStringFragment attribute:DTTextBlocksAttribute atIndex:index longestEffectiveRange:&textBlocksArrayRange inRange:range];
-			
-			index += textBlocksArrayRange.length;
-			
-			if ([textBlocks count] <= level)
-			{
-				// has no blocks at this level
-				continue;
-			}
-			
-			foundBlockAtLevel = YES;
-			
-			// find extent of outermost block
-			DTTextBlock *blockAtLevelToHandle = [textBlocks objectAtIndex:level];
-			
-			NSUInteger searchIndex = NSMaxRange(textBlocksArrayRange);
-			
-			NSRange currentBlockEffectiveRange = textBlocksArrayRange;
-			
-			// search forward for actual end of block
-			while (searchIndex < length && searchIndex < NSMaxRange(range))
-			{
-				NSRange laterBlocksRange;
-				NSArray *laterBlocks = [_attributedStringFragment attribute:DTTextBlocksAttribute atIndex:searchIndex longestEffectiveRange:&laterBlocksRange inRange:range];
-				
-				if (![laterBlocks containsObject:blockAtLevelToHandle])
-				{
-					break;
-				}
-				
-				currentBlockEffectiveRange = NSUnionRange(currentBlockEffectiveRange, laterBlocksRange);
-				
-				searchIndex = NSMaxRange(laterBlocksRange);
-			}
-			
-			index = searchIndex;
-			CGRect blockFrame = [self _blockFrameForEffectiveRange:currentBlockEffectiveRange level:level];
-			
-			BOOL shouldStop = NO;
-			
-			block(blockAtLevelToHandle, blockFrame, currentBlockEffectiveRange, &shouldStop);
-			
-			if (shouldStop)
-			{
-				return YES;
-			}
+            @autoreleasepool {
+                NSRange textBlocksArrayRange;
+                NSArray *textBlocks = [_attributedStringFragment attribute:DTTextBlocksAttribute atIndex:index longestEffectiveRange:&textBlocksArrayRange inRange:range];
+                
+                index += textBlocksArrayRange.length;
+                
+                if ([textBlocks count] <= level)
+                {
+                    // has no blocks at this level
+                    continue;
+                }
+                
+                foundBlockAtLevel = YES;
+                
+                // find extent of outermost block
+                DTTextBlock *blockAtLevelToHandle = [textBlocks objectAtIndex:level];
+                
+                NSUInteger searchIndex = NSMaxRange(textBlocksArrayRange);
+                
+                NSRange currentBlockEffectiveRange = textBlocksArrayRange;
+                
+                // search forward for actual end of block
+                while (searchIndex < length && searchIndex < NSMaxRange(range))
+                {
+                    NSRange laterBlocksRange;
+                    NSArray *laterBlocks = [_attributedStringFragment attribute:DTTextBlocksAttribute atIndex:searchIndex longestEffectiveRange:&laterBlocksRange inRange:range];
+                    
+                    if (![laterBlocks containsObject:blockAtLevelToHandle])
+                    {
+                        break;
+                    }
+                    
+                    currentBlockEffectiveRange = NSUnionRange(currentBlockEffectiveRange, laterBlocksRange);
+                    
+                    searchIndex = NSMaxRange(laterBlocksRange);
+                }
+                
+                index = searchIndex;
+                CGRect blockFrame = [self _blockFrameForEffectiveRange:currentBlockEffectiveRange level:level];
+                
+                BOOL shouldStop = NO;
+                
+                block(blockAtLevelToHandle, blockFrame, currentBlockEffectiveRange, &shouldStop);
+                
+                if (shouldStop)
+                {
+                    return YES;
+                }
+            }
 		}
 		
 		return foundBlockAtLevel;
@@ -1350,85 +1358,87 @@ static BOOL _DTCoreTextLayoutFramesShouldDrawDebugFrames = NO;
 	
 	for (DTCoreTextLayoutLine *oneLine in visibleLines)
 	{
-		if ([oneLine isHorizontalRule])
-		{
-			[self _drawHorizontalRuleFromLine:oneLine inContext:context];
-			continue;
-		}
-		
-		if (_DTCoreTextLayoutFramesShouldDrawDebugFrames)
-		{
-			// draw line bounds
-			CGContextSetRGBStrokeColor(context, 0, 0, 1.0f, 1.0f);
-			CGContextStrokeRect(context, oneLine.frame);
-			
-			// draw baseline
-			CGContextMoveToPoint(context, oneLine.baselineOrigin.x-5.0f, oneLine.baselineOrigin.y);
-			CGContextAddLineToPoint(context, oneLine.baselineOrigin.x + oneLine.frame.size.width + 5.0f, oneLine.baselineOrigin.y);
-			CGContextStrokePath(context);
-		}
-		
-		NSInteger runIndex = 0;
-		
-		for (DTCoreTextGlyphRun *oneRun in oneLine.glyphRuns)
-		{
-			if (!CGRectIntersectsRect(rect, oneRun.frame))
-			{
-				continue;
-			}
-			
-			if (_DTCoreTextLayoutFramesShouldDrawDebugFrames)
-			{
-				if (runIndex%2)
-				{
-					CGContextSetRGBFillColor(context, 1, 0, 0, 0.2f);
-				}
-				else
-				{
-					CGContextSetRGBFillColor(context, 0, 1, 0, 0.2f);
-				}
-				
-				CGContextFillRect(context, oneRun.frame);
-				runIndex ++;
-			}
-			
-			DTTextAttachment *attachment = oneRun.attachment;
-			
-			if (drawImages && [attachment conformsToProtocol:@protocol(DTTextAttachmentDrawing)])
-			{
-				id<DTTextAttachmentDrawing> drawableAttachment = (id<DTTextAttachmentDrawing>)attachment;
-				
-				// frame might be different due to image vertical alignment
-				CGFloat ascender = [attachment ascentForLayout];
-				CGRect rect1 = CGRectMake(oneRun.frame.origin.x, oneLine.baselineOrigin.y - ascender, attachment.displaySize.width, attachment.displaySize.height);
-				
-                CGFloat maxWidth = CGRectGetMaxX(rect) - rect1.origin.x;
-                rect1.size.width = MIN(maxWidth, rect1.size.width);
+        @autoreleasepool {
+            if ([oneLine isHorizontalRule])
+            {
+                [self _drawHorizontalRuleFromLine:oneLine inContext:context];
+                continue;
+            }
+            
+            if (_DTCoreTextLayoutFramesShouldDrawDebugFrames)
+            {
+                // draw line bounds
+                CGContextSetRGBStrokeColor(context, 0, 0, 1.0f, 1.0f);
+                CGContextStrokeRect(context, oneLine.frame);
+                
+                // draw baseline
+                CGContextMoveToPoint(context, oneLine.baselineOrigin.x-5.0f, oneLine.baselineOrigin.y);
+                CGContextAddLineToPoint(context, oneLine.baselineOrigin.x + oneLine.frame.size.width + 5.0f, oneLine.baselineOrigin.y);
+                CGContextStrokePath(context);
+            }
+            
+            NSInteger runIndex = 0;
+            
+            for (DTCoreTextGlyphRun *oneRun in oneLine.glyphRuns)
+            {
+                if (!CGRectIntersectsRect(rect, oneRun.frame))
+                {
+                    continue;
+                }
+                
+                if (_DTCoreTextLayoutFramesShouldDrawDebugFrames)
+                {
+                    if (runIndex%2)
+                    {
+                        CGContextSetRGBFillColor(context, 1, 0, 0, 0.2f);
+                    }
+                    else
+                    {
+                        CGContextSetRGBFillColor(context, 0, 1, 0, 0.2f);
+                    }
+                    
+                    CGContextFillRect(context, oneRun.frame);
+                    runIndex ++;
+                }
+                
+                DTTextAttachment *attachment = oneRun.attachment;
+                
+                if (drawImages && [attachment conformsToProtocol:@protocol(DTTextAttachmentDrawing)])
+                {
+                    id<DTTextAttachmentDrawing> drawableAttachment = (id<DTTextAttachmentDrawing>)attachment;
+                    
+                    // frame might be different due to image vertical alignment
+                    CGFloat ascender = [attachment ascentForLayout];
+                    CGRect rect1 = CGRectMake(oneRun.frame.origin.x, oneLine.baselineOrigin.y - ascender, attachment.displaySize.width, attachment.displaySize.height);
+                    
+                    CGFloat maxWidth = CGRectGetMaxX(rect) - rect1.origin.x;
+                    rect1.size.width = MIN(maxWidth, rect1.size.width);
 
-				[drawableAttachment drawInRect:rect1 context:context];
-			}
-			
-			if (!drawLinks && oneRun.isHyperlink)
-			{
-				continue;
-			}
-			
-			// don't draw decorations on images
-			if (attachment)
-			{
-				continue;
-			}
-			
-			// don't draw background, strikeout or underline for trailing white space
-			if ([oneRun isTrailingWhitespace])
-			{
-				continue;
-			}
-			
-			[self _setForgroundColorInContext:context forGlyphRun:oneRun options:options];
-			
-			[oneRun drawDecorationInContext:context];
-		}
+                    [drawableAttachment drawInRect:rect1 context:context];
+                }
+                
+                if (!drawLinks && oneRun.isHyperlink)
+                {
+                    continue;
+                }
+                
+                // don't draw decorations on images
+                if (attachment)
+                {
+                    continue;
+                }
+                
+                // don't draw background, strikeout or underline for trailing white space
+                if ([oneRun isTrailingWhitespace])
+                {
+                    continue;
+                }
+                
+                [self _setForgroundColorInContext:context forGlyphRun:oneRun options:options];
+                
+                [oneRun drawDecorationInContext:context];
+            }
+        }
 	}
 	
 	// Flip the coordinate system
@@ -1442,114 +1452,116 @@ static BOOL _DTCoreTextLayoutFramesShouldDrawDebugFrames = NO;
 	{
 		for (DTCoreTextGlyphRun *oneRun in oneLine.glyphRuns)
 		{
-			if (!CGRectIntersectsRect(rect, oneRun.frame))
-			{
-				continue;
-			}
-			
-			if (!drawLinks && oneRun.isHyperlink)
-			{
-				continue;
-			}
-			
-			CGPoint textPosition = CGPointMake(oneLine.frame.origin.x, self.frame.size.height - oneRun.frame.origin.y - oneRun.ascent);
-			
-			NSInteger superscriptStyle = [[oneRun.attributes objectForKey:(id)kCTSuperscriptAttributeName] integerValue];
-			
-			NSNumber *ascentMultiplier = [oneRun.attributes objectForKey:(id)DTAscentMultiplierAttribute];
-			
-			
-			switch (superscriptStyle)
-			{
-				case 1:
-				{
-					textPosition.y += oneRun.ascent * (ascentMultiplier ? [ascentMultiplier floatValue] : 0.47f);
-					break;
-				}
-				case -1:
-				{
-					textPosition.y -= oneRun.ascent * (ascentMultiplier ? [ascentMultiplier floatValue] : 0.25f);
-					break;
-				}
-				default:
-					break;
-			}
-			
-			if (DTCoreTextModernAttributesPossible())
-			{
-				NSNumber *baselineOffset = oneRun.attributes[NSBaselineOffsetAttributeName];
-				if (baselineOffset)
-				{
-					textPosition.y += [baselineOffset floatValue];
-				}
-			}
-			
-			CGContextSetTextPosition(context, textPosition.x, textPosition.y);
-			
-			if (!oneRun.attachment)
-			{
-				NSArray *shadows = [oneRun.attributes objectForKey:DTShadowsAttribute];
-				
-				if (shadows)
-				{
-					CGContextSaveGState(context);
-					
-					NSUInteger numShadows = [shadows count];
-					
-					if (numShadows == 1)
-					{
-						// single shadow, we only draw the glyph run with the shadow, no clipping magic
-						NSDictionary *singleShadow = [shadows objectAtIndex:0];
-						[self _setShadowInContext:context fromDictionary:singleShadow additionalOffset:CGSizeZero];
-						
-						[oneRun drawInContext:context];
-					}
-					else // multiple shadows, we shift the text away and then draw a single glyph run over it
-					{
-						// get the run bounds, Core Text has bottom left 0,0 so we flip it
-						CGRect runBoundsFlipped = oneRun.frame;
-						runBoundsFlipped.origin.y = self.frame.size.height - runBoundsFlipped.origin.y - runBoundsFlipped.size.height;
-						
-						// assume that shadows would never be more than 100 pixels away from glyph run frame or outside of frame
-						CGRect clipRect = CGRectIntersection(CGRectInset(runBoundsFlipped, -100, -100), self.frame);
-						
-						// clip to the rect
-						CGContextAddRect(context, clipRect);
-						CGContextClipToRect(context, clipRect);
-						
-						// Move the text outside of the clip rect so that only the shadow is visible
-						CGContextSetTextPosition(context, textPosition.x + clipRect.size.width, textPosition.y);
-						
-						// draw each shadow
-						[shadows enumerateObjectsUsingBlock:^(NSDictionary *shadowDict, NSUInteger idx, BOOL *stop) {
-							BOOL isLastShadow = (idx == (numShadows-1));
-							
-							if (isLastShadow)
-							{
-								// last shadow draws the original text
-								[self _setShadowInContext:context fromDictionary:shadowDict additionalOffset:CGSizeZero];
-								
-								// ... so we put text position back
-								CGContextSetTextPosition(context, textPosition.x, textPosition.y);
-							}
-							else
-							{
-								[self _setShadowInContext:context fromDictionary:shadowDict additionalOffset:CGSizeMake(-clipRect.size.width, 0)];
-							}
-							
-							[oneRun drawInContext:context];
-						}];
-					}
-					
-					CGContextRestoreGState(context);
-				}
-				else // no shadows
-				{
-					[self _setForgroundColorInContext:context forGlyphRun:oneRun options:options];
-					
-					[oneRun drawInContext:context];
-				}
-			}
+            @autoreleasepool {
+                if (!CGRectIntersectsRect(rect, oneRun.frame))
+                {
+                    continue;
+                }
+                
+                if (!drawLinks && oneRun.isHyperlink)
+                {
+                    continue;
+                }
+                
+                CGPoint textPosition = CGPointMake(oneLine.frame.origin.x, self.frame.size.height - oneRun.frame.origin.y - oneRun.ascent);
+                
+                NSInteger superscriptStyle = [[oneRun.attributes objectForKey:(id)kCTSuperscriptAttributeName] integerValue];
+                
+                NSNumber *ascentMultiplier = [oneRun.attributes objectForKey:(id)DTAscentMultiplierAttribute];
+                
+                
+                switch (superscriptStyle)
+                {
+                    case 1:
+                    {
+                        textPosition.y += oneRun.ascent * (ascentMultiplier ? [ascentMultiplier floatValue] : 0.47f);
+                        break;
+                    }
+                    case -1:
+                    {
+                        textPosition.y -= oneRun.ascent * (ascentMultiplier ? [ascentMultiplier floatValue] : 0.25f);
+                        break;
+                    }
+                    default:
+                        break;
+                }
+                
+                if (DTCoreTextModernAttributesPossible())
+                {
+                    NSNumber *baselineOffset = oneRun.attributes[NSBaselineOffsetAttributeName];
+                    if (baselineOffset)
+                    {
+                        textPosition.y += [baselineOffset floatValue];
+                    }
+                }
+                
+                CGContextSetTextPosition(context, textPosition.x, textPosition.y);
+                
+                if (!oneRun.attachment)
+                {
+                    NSArray *shadows = [oneRun.attributes objectForKey:DTShadowsAttribute];
+                    
+                    if (shadows)
+                    {
+                        CGContextSaveGState(context);
+                        
+                        NSUInteger numShadows = [shadows count];
+                        
+                        if (numShadows == 1)
+                        {
+                            // single shadow, we only draw the glyph run with the shadow, no clipping magic
+                            NSDictionary *singleShadow = [shadows objectAtIndex:0];
+                            [self _setShadowInContext:context fromDictionary:singleShadow additionalOffset:CGSizeZero];
+                            
+                            [oneRun drawInContext:context];
+                        }
+                        else // multiple shadows, we shift the text away and then draw a single glyph run over it
+                        {
+                            // get the run bounds, Core Text has bottom left 0,0 so we flip it
+                            CGRect runBoundsFlipped = oneRun.frame;
+                            runBoundsFlipped.origin.y = self.frame.size.height - runBoundsFlipped.origin.y - runBoundsFlipped.size.height;
+                            
+                            // assume that shadows would never be more than 100 pixels away from glyph run frame or outside of frame
+                            CGRect clipRect = CGRectIntersection(CGRectInset(runBoundsFlipped, -100, -100), self.frame);
+                            
+                            // clip to the rect
+                            CGContextAddRect(context, clipRect);
+                            CGContextClipToRect(context, clipRect);
+                            
+                            // Move the text outside of the clip rect so that only the shadow is visible
+                            CGContextSetTextPosition(context, textPosition.x + clipRect.size.width, textPosition.y);
+                            
+                            // draw each shadow
+                            [shadows enumerateObjectsUsingBlock:^(NSDictionary *shadowDict, NSUInteger idx, BOOL *stop) {
+                                BOOL isLastShadow = (idx == (numShadows-1));
+                                
+                                if (isLastShadow)
+                                {
+                                    // last shadow draws the original text
+                                    [self _setShadowInContext:context fromDictionary:shadowDict additionalOffset:CGSizeZero];
+                                    
+                                    // ... so we put text position back
+                                    CGContextSetTextPosition(context, textPosition.x, textPosition.y);
+                                }
+                                else
+                                {
+                                    [self _setShadowInContext:context fromDictionary:shadowDict additionalOffset:CGSizeMake(-clipRect.size.width, 0)];
+                                }
+                                
+                                [oneRun drawInContext:context];
+                            }];
+                        }
+                        
+                        CGContextRestoreGState(context);
+                    }
+                    else // no shadows
+                    {
+                        [self _setForgroundColorInContext:context forGlyphRun:oneRun options:options];
+                        
+                        [oneRun drawInContext:context];
+                    }
+                }
+            }
 		}
 	}
 	
@@ -1574,12 +1586,12 @@ static BOOL _DTCoreTextLayoutFramesShouldDrawDebugFrames = NO;
 	if (!_textAttachments)
 	{
 		NSMutableArray *tmpAttachments = [NSMutableArray array];
-		
+        DTTextAttachment *attachment;
 		for (DTCoreTextLayoutLine *oneLine in self.lines)
 		{
 			for (DTCoreTextGlyphRun *oneRun in oneLine.glyphRuns)
 			{
-				DTTextAttachment *attachment = [oneRun attachment];
+				attachment = [oneRun attachment];
 				
 				if (attachment)
 				{
@@ -1632,10 +1644,11 @@ static BOOL _DTCoreTextLayoutFramesShouldDrawDebugFrames = NO;
 
 - (NSInteger)lineIndexForGlyphIndex:(NSInteger)index
 {
+    NSInteger count = 0;
 	NSInteger retIndex = 0;
 	for (DTCoreTextLayoutLine *oneLine in self.lines)
 	{
-		NSInteger count = [oneLine numberOfGlyphs];
+		count = [oneLine numberOfGlyphs];
 		if (index >= count)
 		{
 			index -= count;
@@ -1653,9 +1666,10 @@ static BOOL _DTCoreTextLayoutFramesShouldDrawDebugFrames = NO;
 
 - (CGRect)frameOfGlyphAtIndex:(NSInteger)index
 {
+    NSInteger count;
 	for (DTCoreTextLayoutLine *oneLine in self.lines)
 	{
-		NSInteger count = [oneLine numberOfGlyphs];
+		count = [oneLine numberOfGlyphs];
 		if (index >= count)
 		{
 			index -= count;
@@ -1693,10 +1707,10 @@ static BOOL _DTCoreTextLayoutFramesShouldDrawDebugFrames = NO;
 	{
 		// actual frame width is maximum value of lines
 		CGFloat maxWidth = 0;
-		
+        CGFloat lineWidthFromFrameOrigin;
 		for (DTCoreTextLayoutLine *oneLine in _lines)
 		{
-			CGFloat lineWidthFromFrameOrigin = CGRectGetMaxX(oneLine.frame) - _frame.origin.x;
+			lineWidthFromFrameOrigin = CGRectGetMaxX(oneLine.frame) - _frame.origin.x;
 			maxWidth = MAX(maxWidth, lineWidthFromFrameOrigin);
 		}
 		
@@ -1726,11 +1740,11 @@ static BOOL _DTCoreTextLayoutFramesShouldDrawDebugFrames = NO;
 	
 	// move up to frame origin because first line usually does not go all the ways up
 	frameOverAllLines.origin.y = outerFrame.origin.y;
-	
+    CGRect frame;
 	for (DTCoreTextLayoutLine *oneLine in _lines)
 	{
 		// need to limit frame to outer frame, otherwise HR causes too long lines
-		CGRect frame = CGRectIntersection(oneLine.frame, outerFrame);
+		frame = CGRectIntersection(oneLine.frame, outerFrame);
 		
 		frameOverAllLines = CGRectUnion(frame, frameOverAllLines);
 	}
@@ -1829,9 +1843,10 @@ static BOOL _DTCoreTextLayoutFramesShouldDrawDebugFrames = NO;
 #pragma mark - Paragraphs
 - (NSUInteger)paragraphIndexContainingStringIndex:(NSUInteger)stringIndex
 {
+    NSRange range;
 	for (NSValue *oneValue in self.paragraphRanges)
 	{
-		NSRange range = [oneValue rangeValue];
+		range = [oneValue rangeValue];
 		
 		if (NSLocationInRange(stringIndex, range))
 		{
@@ -1889,12 +1904,14 @@ static BOOL _DTCoreTextLayoutFramesShouldDrawDebugFrames = NO;
 		
 		NSMutableArray *tmpArray = [NSMutableArray array];
 		
+        NSValue *value;
+        NSUInteger nextParagraphBegin;
 		while (paragraphRange.length)
 		{
-			NSValue *value = [NSValue valueWithRange:paragraphRange];
+			value = [NSValue valueWithRange:paragraphRange];
 			[tmpArray addObject:value];
 			
-			NSUInteger nextParagraphBegin = NSMaxRange(paragraphRange);
+			nextParagraphBegin = NSMaxRange(paragraphRange);
 			
 			if (nextParagraphBegin>=length)
 			{
