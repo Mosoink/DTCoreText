@@ -118,6 +118,26 @@
 					}
 				}
 			}
+            if ([self scanString:@"url(" intoString:&valueString])
+            {
+                if ([valueString isEqualToString:@"url("])
+                {
+                    [self scanUpToString:@");" intoString:&valueString];
+                    NSString * formattedURL = [NSString stringWithFormat:@"url(%@", valueString];
+                    
+                    if (nextIterationAddsNewEntry)
+                    {
+                        [results addObject:formattedURL];
+                        nextIterationAddsNewEntry = NO;
+                    }
+                    else
+                    {
+                        valueString = [NSString stringWithFormat:@"%@ %@", [results lastObject], formattedURL];
+                        [results removeLastObject];
+                        [results addObject:valueString];
+                    }
+                }
+            }
 			else if ([self scanString:@"," intoString:&valueString])
 			{
                 BOOL isStringOnlyCSSProperty = NO;

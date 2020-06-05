@@ -529,7 +529,9 @@
 		}
 		
 		NSDictionary *existingRulesForSelector = [_styles objectForKey:cleanSelector];
-		
+        if ([cleanSelector isEqualToString:@"@font-face"]) {
+            cleanSelector = [NSString stringWithFormat:@"%@-%@", cleanSelector, [NSUUID UUID].UUIDString];
+        }
 		if (existingRulesForSelector)
 		{
 			// substitute new rules over old ones
