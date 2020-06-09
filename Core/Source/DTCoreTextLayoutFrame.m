@@ -37,16 +37,23 @@ static BOOL _DTCoreTextLayoutFramesShouldDrawDebugFrames = NO;
 	DTCoreTextLayoutFrameTextBlockHandler _textBlockHandler;
 	
 	CGFloat _longestLayoutLineWidth;
+    
+    CGSize _maxSize;
 }
 
 // makes a frame for a specific part of the attributed string of the layouter
-- (id)initWithFrame:(CGRect)frame layouter:(DTCoreTextLayouter *)layouter range:(NSRange)range
+- (id)initWithFrame:(CGRect)frame layouter:(DTCoreTextLayouter *)layouter range:(NSRange)range {
+    return [self initWithFrame:frame maxSize:frame.size layouter:layouter range:range];
+}
+
+- (id)initWithFrame:(CGRect)frame maxSize:(CGSize)maxSize layouter:(DTCoreTextLayouter *)layouter range:(NSRange)range
 {
 	self = [super init];
 	
 	if (self)
 	{
-		_frame = frame;
+		_maxSize = maxSize;
+        _frame = frame;
 		
 		_attributedStringFragment = [layouter.attributedString mutableCopy];
 		
@@ -433,7 +440,7 @@ static BOOL _DTCoreTextLayoutFramesShouldDrawDebugFrames = NO;
 	NSRange lineRange = _requestedStringRange;
 	
 	// maximum values for abort of loop
-	CGFloat maxY = CGRectGetMaxY(_frame);
+    CGFloat maxY = CGRectGetMinY(_frame) + _maxSize.height;
 	NSUInteger maxIndex = NSMaxRange(_requestedStringRange);
 	NSUInteger fittingLength = 0;
 	BOOL shouldTruncateLine = NO;
@@ -1695,15 +1702,20 @@ static BOOL _DTCoreTextLayoutFramesShouldDrawDebugFrames = NO;
 		return CGRectZero;
 	}
 	
-	if (_frame.size.height == CGFLOAT_HEIGHT_UNKNOWN)
+    CGRect f = _frame;
+	if (f.size.height == CGFLOAT_HEIGHT_UNKNOWN)
 	{
 		// actual frame is spanned between first and last lines
 		DTCoreTextLayoutLine *lastLine = [_lines lastObject];
 		
-		_frame.size.height = ceil((CGRectGetMaxY(lastLine.frame) - _frame.origin.y + 1.5f + _additionalPaddingAtBottom));
+		f.size.height = ceil((CGRectGetMaxY(lastLine.frame) - _frame.origin.y + 1.5f + _additionalPaddingAtBottom));
+
+        if (f.size.height > _maxSize.height) {
+            f.size.height = _maxSize.height;
+        }
 	}
 	
-	if (_frame.size.width == CGFLOAT_WIDTH_UNKNOWN)
+	if (f.size.width == CGFLOAT_WIDTH_UNKNOWN)
 	{
 		// actual frame width is maximum value of lines
 		CGFloat maxWidth = 0;
@@ -1714,9 +1726,14 @@ static BOOL _DTCoreTextLayoutFramesShouldDrawDebugFrames = NO;
 			maxWidth = MAX(maxWidth, lineWidthFromFrameOrigin);
 		}
 		
-		_frame.size.width = ceil(maxWidth);
+		f.size.width = ceil(maxWidth);
+        
+        if (f.size.width > _maxSize.width) {
+            f.size.width = _maxSize.width;
+        }
 	}
-	
+    _frame = f;
+    
 	return _frame;
 }
 

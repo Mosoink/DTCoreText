@@ -46,7 +46,11 @@
 	[self _discardFramesetter];
 }
 
-- (DTCoreTextLayoutFrame *)layoutFrameWithRect:(CGRect)frame range:(NSRange)range
+- (DTCoreTextLayoutFrame *)layoutFrameWithRect:(CGRect)frame range:(NSRange)range {
+    return [self layoutFrameWithRect:frame maxSize:frame.size range:range];
+}
+
+- (DTCoreTextLayoutFrame *)layoutFrameWithRect:(CGRect)frame maxSize:(CGSize)maxSize range:(NSRange)range
 {
 	DTCoreTextLayoutFrame *newFrame = nil;
 	NSString *cacheKey = nil;
@@ -71,7 +75,7 @@
 
 	@autoreleasepool
 	{
-		newFrame = [[DTCoreTextLayoutFrame alloc] initWithFrame:frame layouter:self range:range];
+		newFrame = [[DTCoreTextLayoutFrame alloc] initWithFrame:frame maxSize:maxSize layouter:self range:range];
 	};
 	
 	if (newFrame && _shouldCacheLayoutFrames)

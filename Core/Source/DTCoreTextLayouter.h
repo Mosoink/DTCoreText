@@ -22,7 +22,6 @@
  This class owns an attributed string and is able to create layoutFrames for certain ranges in this string. Optionally it caches these layout frames.
  */
 @interface DTCoreTextLayouter : NSObject 
-
 /**
  @name Creating a Layouter
  */
@@ -45,6 +44,7 @@
  @param range The string range to fill, pass {0,0} for the entire string (as much as fits)
  */
 - (DTCoreTextLayoutFrame *)layoutFrameWithRect:(CGRect)frame range:(NSRange)range;
+- (DTCoreTextLayoutFrame *)layoutFrameWithRect:(CGRect)frame maxSize:(CGSize)maxSize range:(NSRange)range;
 
 /**
  If set to `YES` then the receiver will cache layout frames generated with layoutFrameWithRect:range: for a given rect

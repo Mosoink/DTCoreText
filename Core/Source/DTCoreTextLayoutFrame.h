@@ -62,7 +62,6 @@ typedef NS_ENUM(NSUInteger, DTCoreTextLayoutFrameDrawingOptions)
 @interface DTCoreTextLayoutFrame : NSObject 
 {
 	CGRect _frame;
-
 	NSArray *_lines;
 	NSArray *_paragraphRanges;
 
@@ -93,7 +92,7 @@ typedef NS_ENUM(NSUInteger, DTCoreTextLayoutFrameDrawingOptions)
  @param range The range within the attributed string to layout into the receiver.
  */
 - (id)initWithFrame:(CGRect)frame layouter:(DTCoreTextLayouter *)layouter range:(NSRange)range;
-
+- (id)initWithFrame:(CGRect)frame maxSize:(CGSize)maxSize layouter:(DTCoreTextLayouter *)layouter range:(NSRange)range;
 
 /**
  @name Getting Information
