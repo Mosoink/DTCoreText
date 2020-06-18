@@ -95,6 +95,7 @@ static NSMutableDictionary *_classForTagNameLookup = nil;
 	
 	if (self)
 	{
+        _displayStyle = element.displayStyle;
 		// width, height from tag
 		_originalSize = element.size; // initially not known
 		

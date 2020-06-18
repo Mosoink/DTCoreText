@@ -12,6 +12,7 @@
 #endif
 
 #import <CoreText/CoreText.h>
+#import "DTCoreTextConstants.h"
 
 @class DTHTMLElement;
 
@@ -142,6 +143,8 @@ typedef NS_ENUM(NSUInteger, DTTextAttachmentVerticalAlignment)
  The size to use for displaying/laying out the receiver
  */
 @property (nonatomic, assign) CGSize displaySize;
+
+@property (nonatomic, assign, readonly) DTHTMLElementDisplayStyle displayStyle;
 
 /**
  Updates the display size optionally passing a maximum size that it should not exceed.

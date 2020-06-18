@@ -1501,6 +1501,16 @@ static BOOL _DTCoreTextLayoutFramesShouldDrawDebugFrames = NO;
                         textPosition.y += [baselineOffset floatValue];
                     }
                 }
+
+                if ([oneRun.attributes objectForKey:DTFieldAttribute]) {
+                    for (DTTextAttachment *a in oneLine.attachments) {
+                        if (a.displayStyle != DTHTMLElementDisplayStyleBlock) {
+                            continue;
+                        }
+                        textPosition.y += CGRectGetHeight(oneLine.frame) - CGRectGetHeight(oneRun.frame);
+                        break;
+                    }
+                }
                 
                 CGContextSetTextPosition(context, textPosition.x, textPosition.y);
                 
