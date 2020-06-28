@@ -168,7 +168,7 @@ DTHTMLElementAttributeName DTListItemPrefixColorAttributeName  = @"DTListItemPre
     
     CTFontRef font;
     if (pFont) {
-        font = CTFontCreateWithName((__bridge CFStringRef)pFont.fontName, pFont.pointSize, NULL);
+        font = CTFontCreateWithName((__bridge CFStringRef)pFont.familyName, pFont.pointSize, NULL);
 //        font = (__bridge CTFontRef)(pFont);
     } else {
         font = [fontDescriptor newMatchingFont];
