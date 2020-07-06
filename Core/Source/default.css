@@ -4,11 +4,6 @@
 
 /* DO NOT fiddle with this file if you want to have your own styles, 
    pass your own stylesheet via the option parameter to override these defaults */
-body {
-    font-size: 16px;
-    color: #323232;
-}
-
 a {
     color: #00bbdd;
     margin: 0px 30px 0px 3px;
