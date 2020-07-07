@@ -238,9 +238,10 @@ static NSMutableDictionary *_classForTagNameLookup = nil;
 
 	if (maxDisplaySize.width>0 && maxDisplaySize.height>0)
 	{
-		if (maxDisplaySize.width < displaySize.width || maxDisplaySize.height < displaySize.height)
+		if (maxDisplaySize.width < displaySize.width)
 		{
-			displaySize = DTCGSizeThatFitsKeepingAspectRatio(displaySize, maxDisplaySize);
+            
+            displaySize = DTCGSizeThatFitsKeepingAspectRatio(displaySize, CGSizeMake(maxDisplaySize.width, CGFLOAT_HEIGHT_UNKNOWN));
 		}
 	}
 	
