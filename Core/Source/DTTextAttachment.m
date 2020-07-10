@@ -33,6 +33,8 @@ static NSMutableDictionary *_classForTagNameLookup = nil;
 	CGFloat _fontLeading;
 	CGFloat _fontAscent;
 	CGFloat _fontDescent;
+    
+    NSValue *_maxImageSizeValue;
 }
 
 + (void)initialize
@@ -102,13 +104,13 @@ static NSMutableDictionary *_classForTagNameLookup = nil;
 		// determine if there is a display size restriction
 		_maxImageSize = CGSizeZero;
 		
-		NSValue *maxImageSizeValue =[options objectForKey:DTMaxImageSize];
-		if (maxImageSizeValue)
+		_maxImageSizeValue =[options objectForKey:DTMaxImageSize];
+		if (_maxImageSizeValue)
 		{
 #if TARGET_OS_IPHONE
-			_maxImageSize = [maxImageSizeValue CGSizeValue];
+			_maxImageSize = [_maxImageSizeValue CGSizeValue];
 #else
-			_maxImageSize = [maxImageSizeValue sizeValue];
+			_maxImageSize = [_maxImageSizeValue sizeValue];
 #endif
 		}
 		
@@ -119,6 +121,23 @@ static NSMutableDictionary *_classForTagNameLookup = nil;
 	}
 	
 	return self;
+}
+
+- (void)setHeadIndent:(CGFloat)headIndent {
+    if (_maxImageSizeValue)
+    {
+        CGSize size;
+#if TARGET_OS_IPHONE
+        size = [_maxImageSizeValue CGSizeValue];
+#else
+        size = [_maxImageSizeValue sizeValue];
+#endif
+        size.width -= headIndent;
+        _maxImageSize = size;
+        if (_displaySize.width > 0 && _displaySize.height > 0) {
+            [self setDisplaySize:_displaySize withMaxDisplaySize:_maxImageSize];
+        }
+    }
 }
 
 - (void)adjustVerticalAlignmentForFont:(CTFontRef)font

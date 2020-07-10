@@ -177,6 +177,8 @@ typedef NS_ENUM(NSUInteger, DTTextAttachmentVerticalAlignment)
  */
 @property (nonatomic, strong) NSDictionary *attributes;
 
+@property (nonatomic, assign) CGFloat headIndent;
+
 /**
  @name Customizing Attachments
  */

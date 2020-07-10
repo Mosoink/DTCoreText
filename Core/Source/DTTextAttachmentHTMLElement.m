@@ -69,6 +69,11 @@
 	return self;
 }
 
+- (void)inheritAttributesFromElement:(DTHTMLElement *)element {
+    [super inheritAttributesFromElement:element];
+    [self.textAttachment setHeadIndent:_paragraphStyle.headIndent];
+}
+
 - (NSAttributedString *)attributedString
 {
 	@synchronized(self)
