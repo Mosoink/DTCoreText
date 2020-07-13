@@ -1507,6 +1507,10 @@ static BOOL _DTCoreTextLayoutFramesShouldDrawDebugFrames = NO;
                         if (a.displayStyle != DTHTMLElementDisplayStyleBlock) {
                             continue;
                         }
+                        if (a.verticalAlignment != DTTextAttachmentVerticalAlignmentTop
+                            && a.verticalAlignment != DTTextAttachmentVerticalAlignmentBaseline) {
+                            continue;
+                        }
                         textPosition.y += CGRectGetHeight(oneLine.frame) - CGRectGetHeight(oneRun.frame);
                         break;
                     }
