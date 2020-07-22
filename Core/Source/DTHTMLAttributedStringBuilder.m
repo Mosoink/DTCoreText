@@ -858,12 +858,11 @@
 									if ([strongSelf->_tmpString length] && ![[strongSelf->_tmpString string] hasSuffix:@"\n"])
 									{
 										// trim off whitespace
-										while ([[strongSelf->_tmpString string] hasSuffixCharacterFromSet:[NSCharacterSet ignorableWhitespaceCharacterSet]])
-										{
-											[strongSelf->_tmpString deleteCharactersInRange:NSMakeRange([strongSelf->_tmpString length]-1, 1)];
-										}
-										
-										[strongSelf->_tmpString appendString:@"\n"];
+//										while ([[strongSelf->_tmpString string] hasSuffixCharacterFromSet:[NSCharacterSet ignorableWhitespaceCharacterSet]])
+//										{
+//											[strongSelf->_tmpString deleteCharactersInRange:NSMakeRange([strongSelf->_tmpString length]-1, 1)];
+//										}
+                                        [strongSelf->_tmpString appendString:@"\n"];
 									}
 								}
 								

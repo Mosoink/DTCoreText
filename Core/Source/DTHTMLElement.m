@@ -475,13 +475,14 @@ NSDictionary *_classesForNames = nil;
 					if (oneChild.displayStyle == DTHTMLElementDisplayStyleBlock)
 					{
 						// trim off whitespace suffix
-						while ([[tmpString string] hasSuffixCharacterFromSet:[NSCharacterSet ignorableWhitespaceCharacterSet]])
-						{
-							[tmpString deleteCharactersInRange:NSMakeRange([tmpString length]-1, 1)];
-						}
-						
+//						while ([[tmpString string] hasSuffixCharacterFromSet:[NSCharacterSet ignorableWhitespaceCharacterSet]])
+//						{
+//							[tmpString deleteCharactersInRange:NSMakeRange([tmpString length]-1, 1)];
+//						}
 						// paragraph break
-						[tmpString appendString:@"\n"];
+                        if (tmpString.length > 0 && ![[tmpString string] hasSuffix:@"\n"]) {
+                            [tmpString appendString:@"\n"];
+                        }
 					}
 				}
 				
@@ -489,36 +490,36 @@ NSDictionary *_classesForNames = nil;
 				
 				if (nodeString)
 				{
-					if (!oneChild.containsAppleConvertedSpace)
-					{
-						// we already have a white space in the string so far
-						if ([[tmpString string] hasSuffixCharacterFromSet:[NSCharacterSet ignorableWhitespaceCharacterSet]])
-						{
-							// following e.g. a BR we don't want a space or NL
-							NSCharacterSet *charactersToIgnore = [NSCharacterSet characterSetWithCharactersInString:@" \n\t"];
-							
-							while ([[nodeString string] hasPrefixCharacterFromSet:charactersToIgnore])
-							{
-								NSString *field = [nodeString attribute:DTFieldAttribute atIndex:0 effectiveRange:NULL];
-								
-								// do not trim off field
-								if ([field isEqualToString:DTListPrefixField])
-								{
-									break;
-								}
-								
-								// do not trim off HR character
-								BOOL isHR = [[nodeString attribute:DTHorizontalRuleStyleAttribute atIndex:0 effectiveRange:NULL] boolValue];
-								
-								if (isHR)
-								{
-									break;
-								}
-								
-								nodeString = [nodeString attributedSubstringFromRange:NSMakeRange(1, [nodeString length]-1)];
-							}
-						}
-					}
+//					if (!oneChild.containsAppleConvertedSpace)
+//					{
+//						// we already have a white space in the string so far
+//						if ([[tmpString string] hasSuffixCharacterFromSet:[NSCharacterSet ignorableWhitespaceCharacterSet]])
+//						{
+//							// following e.g. a BR we don't want a space or NL
+//							NSCharacterSet *charactersToIgnore = [NSCharacterSet characterSetWithCharactersInString:@" \n\t"];
+//
+//							while ([[nodeString string] hasPrefixCharacterFromSet:charactersToIgnore])
+//							{
+//								NSString *field = [nodeString attribute:DTFieldAttribute atIndex:0 effectiveRange:NULL];
+//
+//								// do not trim off field
+//								if ([field isEqualToString:DTListPrefixField])
+//								{
+//									break;
+//								}
+//
+//								// do not trim off HR character
+//								BOOL isHR = [[nodeString attribute:DTHorizontalRuleStyleAttribute atIndex:0 effectiveRange:NULL] boolValue];
+//
+//								if (isHR)
+//								{
+//									break;
+//								}
+//
+//								nodeString = [nodeString attributedSubstringFromRange:NSMakeRange(1, [nodeString length]-1)];
+//							}
+//						}
+//					}
 					
 					[tmpString appendAttributedString:nodeString];
 				}
