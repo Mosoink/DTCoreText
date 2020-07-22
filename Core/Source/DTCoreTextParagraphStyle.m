@@ -121,7 +121,7 @@
 	{
 		// defaults
 		_firstLineHeadIndent = 0.0;
-		_defaultTabInterval = 36.0;
+        _defaultTabInterval = 5.0;
 		_baseWritingDirection = kCTWritingDirectionNatural;
 #if DTCORETEXT_SUPPORT_NS_ATTRIBUTES
 		_alignment = kCTTextAlignmentNatural;
