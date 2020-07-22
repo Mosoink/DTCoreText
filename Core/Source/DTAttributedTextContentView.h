@@ -237,6 +237,13 @@ typedef NSUInteger DTAttributedTextContentViewRelayoutMask;
  */
 @property (nonatomic, copy) NSAttributedString *attributedString;
 
+/**
+ Providing Content (With DTCoreTextLayouter and DTCoreTextLayoutFrame)
+
+ @param layouter the layouter
+ @param layoutFrame the layout frame
+ */
+- (void)setAttributedStringWithLayouter:(DTCoreTextLayouter *)layouter layoutFrame:(DTCoreTextLayoutFrame *)layoutFrame;
 
 /**
  The delegate that is in charge of supplying custom behavior for the receiver. It must conform to <DTAttributedTextContentViewDelegate> and provide custom subviews, link buttons, etc.
