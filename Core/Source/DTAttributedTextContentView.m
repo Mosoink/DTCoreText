@@ -717,6 +717,79 @@ static Class _layerClassToUseForDTAttributedTextContentView = nil;
 	}
 }
 
+- (void)setAttributedStringWithLayouter:(DTCoreTextLayouter *)layouter
+                            layoutFrame:(DTCoreTextLayoutFrame *)layoutFrame {
+//    if (_attributedString == layouter.attributedString) return;
+    
+    // keep the layouter, update string
+    self.layouter = layouter;
+    _attributedString = layouter.attributedString;
+    
+    // only do relayout if there is a previous layout frame and visible
+    if (_layoutFrame)
+    {
+        // new layout invalidates all positions for custom views
+        [self removeAllCustomViews];
+        
+        // relayout only occurs if the view is visible
+        [self relayoutTextWithLayoutFrame:layoutFrame];
+    }
+    else
+    {
+        self.layoutFrame = layoutFrame;
+        
+        // this is needed or else no lazy layout will be triggered if there is no layout frame yet (before this is added to a superview)
+        [self setNeedsLayout];
+        [self setNeedsDisplayInRect:self.bounds];
+    }
+    
+    if ([self respondsToSelector:@selector(invalidateIntrinsicContentSize)])
+    {
+        [self invalidateIntrinsicContentSize];
+    }
+}
+
+- (void)relayoutTextWithLayoutFrame:(DTCoreTextLayoutFrame *)layoutFrame
+{
+    DT_WEAK_VARIABLE typeof(self) weakSelf = self;
+    DTBlockPerformSyncIfOnMainThreadElseAsync(^{
+        DTAttributedTextContentView *strongSelf = weakSelf;
+        // Make sure we actually have a superview and a previous layout before attempting to relayout the text.
+        if (strongSelf->_layoutFrame && strongSelf.superview)
+        {
+            // need new layout frame, layouter can remain because the attributed string is probably the same
+            strongSelf.layoutFrame = nil;
+            
+            // remove all links because they might have merged or split
+            [strongSelf removeAllCustomViewsForLinks];
+            
+            if (strongSelf->_attributedString)
+            {
+                // triggers new layout
+                strongSelf.layoutFrame = layoutFrame;
+                CGSize neededSize = [strongSelf intrinsicContentSize];
+                
+                CGRect optimalFrame = CGRectMake(strongSelf.frame.origin.x,
+                                                 strongSelf.frame.origin.y,
+                                                 neededSize.width,
+                                                 neededSize.height);
+                NSDictionary *userInfo = [NSDictionary dictionaryWithObject:[NSValue valueWithCGRect:optimalFrame] forKey:@"OptimalFrame"];
+                
+                [[NSNotificationCenter defaultCenter] postNotificationName:DTAttributedTextContentViewDidFinishLayoutNotification object:strongSelf userInfo:userInfo];
+            }
+            
+            [strongSelf setNeedsLayout];
+            [strongSelf setNeedsDisplayInRect:strongSelf.bounds];
+            
+            if ([strongSelf respondsToSelector:@selector(invalidateIntrinsicContentSize)])
+            {
+                [strongSelf invalidateIntrinsicContentSize];
+            }
+        }
+    });
+}
+
+
 - (void)setFrame:(CGRect)frame
 {
 	CGRect oldFrame = self.frame;
