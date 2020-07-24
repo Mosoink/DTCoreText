@@ -470,20 +470,20 @@ NSDictionary *_classesForNames = nil;
 				}
 				
 				// if previous node was inline and this child is block then we need a newline
-//				if (previousChild && previousChild.displayStyle == DTHTMLElementDisplayStyleInline)
-//				{
-//					if (oneChild.displayStyle == DTHTMLElementDisplayStyleBlock)
-//					{
-//						// trim off whitespace suffix
+				if (previousChild && previousChild.displayStyle == DTHTMLElementDisplayStyleInline)
+				{
+					if (oneChild.displayStyle == DTHTMLElementDisplayStyleBlock)
+					{
+						// trim off whitespace suffix
 //						while ([[tmpString string] hasSuffixCharacterFromSet:[NSCharacterSet ignorableWhitespaceCharacterSet]])
 //						{
 //							[tmpString deleteCharactersInRange:NSMakeRange([tmpString length]-1, 1)];
 //						}
-//						
-//						// paragraph break
-//						[tmpString appendString:@"\n"];
-//					}
-//				}
+						
+						// paragraph break
+						[tmpString appendString:@"\n"];
+					}
+				}
 				
 				NSAttributedString *nodeString = [oneChild attributedString];
 				
