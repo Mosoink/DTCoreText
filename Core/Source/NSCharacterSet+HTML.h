@@ -32,6 +32,8 @@
 + (NSCharacterSet *)tagAttributeNameCharacterSet;
 
 
++ (NSCharacterSet *)ignorableNewlineCharacterSet;
+
 /**
  Creates a characterset of all whitespace and newline characters that can be ignored between HTML tags
  @returns An NSCharacterSet of ignorable characters

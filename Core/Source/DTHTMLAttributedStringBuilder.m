@@ -83,6 +83,8 @@
 	BOOL _preserverDocumentTrailingSpaces; // don't remove spaces at end of document
 	
 	DTHTMLParser  *_parser;
+    
+    DTHTMLElement *_previousElement;
 }
 
 - (id)initWithHTML:(NSData *)data options:(NSDictionary *)options documentAttributes:(NSDictionary * __autoreleasing*)docAttributes
@@ -852,19 +854,33 @@
 							
 							if (nodeString)
 							{
+                                
 								// if this is a block element then we need a paragraph break before it
 								if (theTag.displayStyle != DTHTMLElementDisplayStyleInline)
 								{
-									if ([strongSelf->_tmpString length] && ![[strongSelf->_tmpString string] hasSuffix:@"\n"])
-									{
-										// trim off whitespace
-//										while ([[strongSelf->_tmpString string] hasSuffixCharacterFromSet:[NSCharacterSet ignorableWhitespaceCharacterSet]])
-//										{
-//											[strongSelf->_tmpString deleteCharactersInRange:NSMakeRange([strongSelf->_tmpString length]-1, 1)];
-//										}
-                                        [strongSelf->_tmpString appendString:@"\n"];
-									}
-								}
+                                    if ([strongSelf->_tmpString length] && ![[strongSelf->_tmpString string] hasSuffix:@"\n"])
+                                    {                                        // trim off whitespace
+//                                        while ([[strongSelf->_tmpString string] hasSuffixCharacterFromSet:[NSCharacterSet ignorableWhitespaceCharacterSet]])
+//                                        {
+//                                            [strongSelf->_tmpString deleteCharactersInRange:NSMakeRange([strongSelf->_tmpString length]-1, 1)];
+//                                        }
+                                        if ([[strongSelf->_tmpString string] hasSuffixCharacterFromSet:[NSCharacterSet ignorableNewlineCharacterSet]]) {
+                                            
+                                        } else {
+                                            [strongSelf->_tmpString appendString:@"\n"];
+                                        }
+                                    }
+                                } else {
+                                    if (strongSelf->_previousElement.displayStyle != DTHTMLElementDisplayStyleInline && [strongSelf->_tmpString length] && [nodeString length]) {
+                                        
+                                        if ([[strongSelf->_tmpString string] hasSuffix:@"\n"] || [[strongSelf->_tmpString string] hasSuffixCharacterFromSet:[NSCharacterSet ignorableNewlineCharacterSet]]) {
+                                            
+                                            if ([[nodeString string] hasPrefixCharacterFromSet:[NSCharacterSet ignorableNewlineCharacterSet]]) {
+                                                [strongSelf->_tmpString deleteCharactersInRange:NSMakeRange([strongSelf->_tmpString length]-1, 1)];
+                                            }
+                                        }
+                                    }
+                                }
 								
 								[strongSelf->_tmpString appendAttributedString:nodeString];
 								theTag.didOutput = YES;
@@ -874,6 +890,7 @@
 									// we don't need the children any more
 									[theTag removeAllChildNodes];
 								}
+                                strongSelf->_previousElement = theTag;
 							}
 							
 						}
